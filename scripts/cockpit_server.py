@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 import sf_project
+import style_studio
 from platform_compat import add_to_path, open_file, reveal_in_file_manager
 import broll_contract
 import cutter_broll_session
@@ -659,6 +660,12 @@ class Handler(TerminalHandlerMixin, BaseHTTPRequestHandler):
                 return self.serve_index()
             if route == "/favicon.ico":
                 return self._send_bytes(b"", "image/x-icon", HTTPStatus.NO_CONTENT)
+            if route == "/style":
+                return self.serve_style_page()
+            if route == "/api/style/catalog":
+                return self.style_catalog()
+            if route == "/api/style/preview.png":
+                return self.style_preview(qs)
             if route.startswith("/firstframe/"):
                 return self.serve_first_frame(route)
             if route.startswith("/medien/"):
@@ -821,6 +828,8 @@ class Handler(TerminalHandlerMixin, BaseHTTPRequestHandler):
         try:
             if route == "/api/sf/save":
                 return self.save_sf_settings()
+            if route == "/api/style/apply":
+                return self.style_apply()
             if route == "/api/sf/audio":
                 self._read_post_json()
                 return self._send_json(sf_audio_state(sf_project.load_settings(CFG["workdir"]), start=True))
@@ -885,6 +894,53 @@ class Handler(TerminalHandlerMixin, BaseHTTPRequestHandler):
         except ValueError as error:
             return self._send_json({"ok": False, "error": str(error)}, HTTPStatus.BAD_REQUEST)
         return self._send_json(dict(saved, ok=True, resolvedAudio=sf_audio_state(saved, start=True)))
+
+    # --- Style-Studio (Erweiterung) ---------------------------------------
+    def serve_style_page(self):
+        with open(os.path.join(HERE, "cockpit", "style-studio.html"), "rb") as stream:
+            data = stream.read()
+        self._send_bytes(data, "text/html; charset=utf-8", extra_headers={"Cache-Control": "no-store"})
+
+    def style_catalog(self):
+        layout = sf_project.load_settings(CFG["workdir"])["layout"] if is_shortform() else None
+        data = style_studio.catalog(layout)
+        data["project"] = {"shortform": bool(is_shortform()),
+                           "name": os.path.basename((CFG.get("workdir") or "").rstrip("/\\"))}
+        return self._send_json(data)
+
+    def style_preview(self, qs):
+        def one(key):
+            return (qs.get(key) or [None])[0]
+        raw = {k: one(k) for k in ("font", "size", "uppercase", "text", "hot", "stroke",
+                                   "stroke_color", "shadow", "hot_style", "box_radius")
+               if one(k) is not None}
+        words = (one("words") or "").split() or None
+        try:
+            hot_idx = int(one("hot_idx") if one("hot_idx") is not None else 1)
+        except ValueError:
+            hot_idx = 1
+        try:
+            png = style_studio.render_preview(raw, words, hot_idx, int(one("w") or 720))
+        except ValueError as error:
+            return self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+        return self._send_bytes(png, "image/png", extra_headers={"Cache-Control": "no-store"})
+
+    def style_apply(self):
+        if not self._term_origin_ok():
+            return self._send_json({"error": "forbidden"}, HTTPStatus.FORBIDDEN)
+        if not is_shortform():
+            return self._send_json({"ok": False, "error": "Kein Reel-Projekt geöffnet. Die Vorschau "
+                                    "funktioniert trotzdem, anwenden geht nur in einem Reel-Projekt."},
+                                   HTTPStatus.BAD_REQUEST)
+        request = self._read_post_json()
+        try:
+            with _OVR_LOCK:
+                saved = style_studio.apply_to_project(CFG["workdir"], request.get("style") or {})
+        except sf_project.RevisionConflict as error:
+            return self._send_json({"ok": False, "conflict": True, "error": str(error)}, HTTPStatus.CONFLICT)
+        except ValueError as error:
+            return self._send_json({"ok": False, "error": str(error)}, HTTPStatus.BAD_REQUEST)
+        return self._send_json({"ok": True, "revision": saved.get("revision")})
 
     def sf_text_preview(self):
         request = self._read_post_json()

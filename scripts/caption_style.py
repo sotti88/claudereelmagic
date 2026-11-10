@@ -32,8 +32,13 @@ DEFAULT = {
 def load_style(layout):
     st = dict(DEFAULT)
     st.update({k: v for k, v in (layout.get("caption") or {}).items() if v is not None})
-    if not os.path.exists(st["font"]):
-        st["font"] = DEFAULT["font"]
+    # Schriften duerfen als NAME (relativ zu assets/fonts) gespeichert sein ->
+    # portabel zwischen Mac, Windows und Cloud. Absolute Pfade (alte Projekte)
+    # gehen weiter.
+    font = st["font"]
+    if not os.path.isabs(font):
+        font = os.path.join(_ASSETS, font)
+    st["font"] = font if os.path.exists(font) else DEFAULT["font"]
     return st
 
 

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Style-Studio</title>
+<style>
+  :root {
+    --bg: #f6f4f1; --card: #ffffff; --ink: #1d1b22; --muted: #6b6674; --line: #e3dfe8;
+    --accent: #d4436a; --accent-ink: #ffffff; --ok: #1f8a5b; --err: #c0262d;
+    --shadow: 0 1px 2px rgba(20,16,30,.06), 0 6px 20px rgba(20,16,30,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15131a; --card: #1f1c27; --ink: #f1eef6; --muted: #a39dae; --line: #332f3d;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; padding-bottom: 96px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 0 8px; }
+  h1 { font-size: 1.4rem; margin: 0; }
+  .badge { font-size: .85rem; padding: 4px 10px; border-radius: 999px; background: var(--card);
+           border: 1px solid var(--line); color: var(--muted); }
+  .badge.ok { color: var(--ok); border-color: var(--ok); }
+  header a { margin-left: auto; color: var(--muted); text-decoration: none; font-size: .95rem; }
+  header a:hover { color: var(--ink); }
+  .preview { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0 12px; }
+  .preview-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+                  box-shadow: var(--shadow); padding: 12px; }
+  .preview-card img { display: block; width: 100%; max-width: 720px; margin: 0 auto; border-radius: 10px; }
+  .words { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+  .words input { flex: 1 1 200px; max-width: 320px; font: inherit; padding: 8px 12px;
+                 border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .words .hint { color: var(--muted); font-size: .85rem; width: 100%; text-align: center; }
+  .wordchip { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px;
+              padding: 6px 12px; font: inherit; cursor: pointer; }
+  .wordchip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  section { margin: 22px 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: .9rem; margin: 0 0 10px; }
+  .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .grid.wide { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+  .tile { background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 8px;
+          text-align: left; cursor: pointer; font: inherit; color: var(--ink); min-height: 56px;
+          transition: transform .08s, border-color .12s; }
+  .tile:hover { transform: translateY(-1px); }
+  .tile:focus-visible, .wordchip:focus-visible, .chip:focus-visible, .apply:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .tile img { display: block; width: 100%; border-radius: 8px; background: #2b2d42; aspect-ratio: 18/5; object-fit: cover; }
+  .tile .name { font-weight: 600; margin-top: 6px; font-size: .95rem; }
+  .tile .desc { color: var(--muted); font-size: .82rem; }
+  .dots { display: flex; gap: 6px; margin-bottom: 6px; }
+  .dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px;
+          padding: 10px 16px; font: inherit; cursor: pointer; min-height: 44px; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)); font-weight: 600; }
+  .row { margin: 12px 0; }
+  .row > b { display: block; font-size: .9rem; margin-bottom: 6px; color: var(--muted); font-weight: 600; }
+  .soon { opacity: .55; }
+  .note { background: var(--card); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; color: var(--muted); font-size: .9rem; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--bg) 92%, transparent);
+         backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 12px 16px; z-index: 10; }
+  .bar .wrap { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 0; }
+  .apply { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 12px 22px;
+           font: inherit; font-weight: 700; cursor: pointer; min-height: 48px; }
+  .apply:disabled { opacity: .5; cursor: not-allowed; }
+  #msg { font-size: .95rem; flex: 1 1 240px; }
+  #msg.ok { color: var(--ok); } #msg.err { color: var(--err); }
+  @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, 1fr); } .grid.wide { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Style-Studio</h1>
+    <span class="badge" id="project">lädt …</span>
+    <a href="/">← zurück zum Cockpit</a>
+  </header>
+
+  <div class="preview">
+    <div class="preview-card">
+      <img id="preview" alt="Vorschau des Untertitel-Stils">
+      <div class="words">
+        <input id="sample" value="Das ist dein Look" maxlength="60" aria-label="Beispieltext" placeholder="Beispieltext">
+        <div id="wordchips" role="group" aria-label="Hervorgehobenes Wort"></div>
+        <div class="hint">Die Vorschau nutzt dasselbe Zeichenprogramm wie der Render: so sieht das fertige Video aus.</div>
+      </div>
+    </div>
+  </div>
+
+  <section><h2>Fertige Looks</h2><p class="sub">Ein Tipp stellt alles auf einmal ein. Danach kannst du jedes Detail ändern.</p>
+    <div class="grid wide" id="looks"></div></section>
+
+  <section><h2>Schrift</h2><p class="sub" id="fontsub"></p><div class="grid" id="fonts"></div></section>
+
+  <section><h2>Farben</h2><p class="sub">Textfarbe · Hervorhebung · Konturfarbe</p><div class="grid" id="palettes"></div></section>
+
+  <section><h2>Hervorhebung des aktiven Wortes</h2>
+    <div class="chips" id="highlights"></div>
+    <div class="row" id="radiusRow"><b>Form der Box</b><div class="chips" id="radii"></div></div></section>
+
+  <section><h2>Details</h2>
+    <div class="row"><b>Größe</b><div class="chips" id="sizes"></div></div>
+    <div class="row"><b>Kontur (Rand)</b><div class="chips" id="strokes"></div></div>
+    <div class="row"><b>Schatten</b><div class="chips" id="shadows"></div></div>
+    <div class="row"><b>Schreibweise</b><div class="chips" id="cases"></div></div></section>
+
+  <section class="soon"><h2>Animationen</h2>
+    <div class="note">Einblenden, Poppen und Gleiten kommen in der nächsten Etappe. Der Render kann sie heute noch nicht, deshalb zeige ich hier keine Regler, die nichts bewirken.</div></section>
+</div>
+
+<div class="bar"><div class="wrap">
+  <button class="apply" id="apply" disabled>Auf mein Projekt anwenden</button>
+  <div id="msg" role="status" aria-live="polite"></div>
+</div></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+let cat = null, style = null, hotIdx = 1, canApply = false, timer = null;
+
+function el(tag, props = {}, kids = []) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "text") n.textContent = v; else if (k === "class") n.className = v; else n.setAttribute(k, v);
+  }
+  for (const c of kids) n.append(c);
+  return n;
+}
+function words() { return $("sample").value.trim().split(/\s+/).filter(Boolean).slice(0, 4); }
+function params(s, extra = {}) {
+  const p = new URLSearchParams({ font: s.font, size: s.size, uppercase: s.uppercase ? 1 : 0, text: s.text,
+    hot: s.hot, stroke: s.stroke, stroke_color: s.stroke_color, shadow: s.shadow,
+    hot_style: s.hot_style, box_radius: s.box_radius, ...extra });
+  return "/api/style/preview.png?" + p.toString();
+}
+function thumb(s, w = 420, text = null, hot = 1) {
+  return params(s, { words: text || (words().join(" ") || "Das ist dein Look"), hot_idx: hot, w });
+}
+function sameStyle(a, b, keys) { return keys.every((k) => String(a[k]).toLowerCase() === String(b[k]).toLowerCase()); }
+function tile(img, name, desc, pressed, onClick, dots) {
+  const t = el("button", { class: "tile", type: "button", "aria-pressed": String(!!pressed) });
+  if (dots) t.append(el("div", { class: "dots" }, dots.map((c) => { const d = el("span", { class: "dot" }); d.style.background = c; return d; })));
+  if (img) { const i = el("img", { alt: "", loading: "lazy" }); i.src = img; t.append(i); }
+  t.append(el("div", { class: "name", text: name }));
+  if (desc) t.append(el("div", { class: "desc", text: desc }));
+  t.addEventListener("click", onClick);
+  return t;
+}
+function chips(id, items, isOn, onPick) {
+  const box = $(id); box.replaceChildren();
+  for (const it of items) {
+    const b = el("button", { class: "chip", type: "button", "aria-pressed": String(isOn(it)), text: it.label });
+    b.addEventListener("click", () => onPick(it));
+    box.append(b);
+  }
+}
+function setStyle(patch) { style = { ...style, ...patch }; render(); }
+
+function render() {
+  // Looks
+  const looks = $("looks"); looks.replaceChildren();
+  for (const L of cat.looks) {
+    const on = sameStyle(style, L.style, ["font","size","uppercase","text","hot","stroke","stroke_color","shadow","hot_style","box_radius"]);
+    looks.append(tile(thumb(L.style, 420, "Das ist dein Look"), L.label, L.desc, on, () => setStyle({ ...L.style })));
+  }
+  // Schriften
+  const fonts = $("fonts"); fonts.replaceChildren();
+  for (const F of cat.fonts) {
+    fonts.append(tile(thumb({ ...style, font: F.id, size: 104 }, 360, "Aa Dein Text", -1), F.label, F.user ? "Eigene Schrift" : "", style.font === F.id, () => setStyle({ font: F.id })));
+  }
+  const nUser = cat.fonts.filter((f) => f.user).length;
+  $("fontsub").textContent = nUser
+    ? "Eigene Schriften: " + nUser + " gefunden."
+    : "Mehr Schriften: .ttf/.otf-Dateien in den Ordner assets/fonts/user/ legen und diese Seite neu laden.";
+  // Farben
+  const pal = $("palettes"); pal.replaceChildren();
+  for (const P of cat.palettes) {
+    pal.append(tile(null, P.label, "", sameStyle(style, { text: P.text, hot: P.hot, stroke_color: P.stroke }, ["text","hot","stroke_color"]),
+      () => setStyle({ text: P.text, hot: P.hot, stroke_color: P.stroke }), [P.text, P.hot, P.stroke]));
+  }
+  // Hervorhebung
+  chips("highlights", cat.highlights, (h) => style.hot_style === h.id, (h) => setStyle({ hot_style: h.id }));
+  $("radiusRow").style.display = style.hot_style === "box" ? "" : "none";
+  chips("radii", cat.radii, (r) => Number(style.box_radius) === r.value, (r) => setStyle({ box_radius: r.value }));
+  chips("sizes", cat.sizes, (r) => Number(style.size) === r.value, (r) => setStyle({ size: r.value }));
+  chips("strokes", cat.strokes, (r) => Number(style.stroke) === r.value, (r) => setStyle({ stroke: r.value }));
+  chips("shadows", cat.shadows, (r) => Number(style.shadow) === r.value, (r) => setStyle({ shadow: r.value }));
+  chips("cases", [{ label: "GROSSBUCHSTABEN", v: true }, { label: "Normal", v: false }],
+    (r) => !!style.uppercase === r.v, (r) => setStyle({ uppercase: r.v }));
+  renderWordChips();
+  clearTimeout(timer); timer = setTimeout(updatePreview, 80);
+}
+function renderWordChips() {
+  const box = $("wordchips"); box.replaceChildren();
+  const w = words();
+  if (hotIdx >= w.length) hotIdx = Math.max(0, w.length - 1);
+  w.forEach((word, i) => {
+    const b = el("button", { class: "wordchip", type: "button", "aria-pressed": String(i === hotIdx), text: word });
+    b.addEventListener("click", () => { hotIdx = i; renderWordChips(); updatePreview(); });
+    box.append(b);
+  });
+}
+function updatePreview() {
+  $("preview").src = params(style, { words: words().join(" ") || "Das ist dein Look", hot_idx: hotIdx, w: 720 });
+}
+async function apply() {
+  const msg = $("msg"); msg.className = ""; msg.textContent = "Speichere …"; $("apply").disabled = true;
+  try {
+    const r = await fetch("/api/style/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ style }) });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) { msg.className = "ok"; msg.textContent = "Gespeichert. Lade das Cockpit neu (F5), um den neuen Stil zu sehen."; }
+    else { msg.className = "err"; msg.textContent = d.error || ("Fehler " + r.status); }
+  } catch (e) { msg.className = "err"; msg.textContent = "Keine Verbindung zum Cockpit: " + e.message; }
+  $("apply").disabled = !canApply;
+}
+async function init() {
+  try {
+    const r = await fetch("/api/style/catalog"); cat = await r.json();
+  } catch (e) { $("project").textContent = "Fehler beim Laden"; $("msg").className = "err"; $("msg").textContent = String(e); return; }
+  style = { ...(cat.current || cat.looks[0].style) };
+  canApply = !!cat.project.shortform;
+  $("project").textContent = canApply ? "Projekt: " + (cat.project.name || "Reel") : "Nur Vorschau (kein Reel-Projekt geöffnet)";
+  $("project").classList.toggle("ok", canApply);
+  $("apply").disabled = !canApply;
+  if (!canApply) $("msg").textContent = "Anwenden ist nur in einem Reel-Projekt möglich. Ausprobieren geht trotzdem.";
+  $("sample").addEventListener("input", () => { renderWordChips(); updatePreview(); });
+  $("apply").addEventListener("click", apply);
+  render();
+}
+init();
+</script>
+</body>
+</html>
