@@ -1,7 +1,6 @@
 """Shared Shortform settings, revisions and deterministic text artwork."""
 from contextlib import contextmanager
 from copy import deepcopy
-import fcntl
 import hashlib
 import json
 import os
@@ -12,6 +11,7 @@ import uuid
 
 from PIL import Image, ImageDraw, ImageFont
 import caption_style
+from platform_compat import file_lock
 
 DEFAULT_LAYOUT = {
     "video_yoff": 0,
@@ -54,13 +54,8 @@ def atomic_json(path, value):
 def project_lock(workdir):
     with _LOCK:
         path = Path(workdir) / ".sf-settings.lock"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a") as stream:
-            fcntl.flock(stream, fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(stream, fcntl.LOCK_UN)
+        with file_lock(path):
+            yield
 
 
 def resolve_layout(layout):

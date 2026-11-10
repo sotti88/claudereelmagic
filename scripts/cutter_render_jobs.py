@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from collections import deque
 from contextlib import contextmanager
-import fcntl
 import hashlib
 import json
 import os
@@ -19,6 +18,8 @@ import sys
 import threading
 import time
 import uuid
+
+from platform_compat import file_lock
 
 HERE = Path(__file__).resolve().parent
 MONTHS = ("", "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
@@ -42,18 +43,6 @@ def atomic_json(path, value):
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
-
-
-@contextmanager
-def file_lock(path, blocking=True):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a+") as stream:
-        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
-        try:
-            yield stream
-        finally:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def digest(value):

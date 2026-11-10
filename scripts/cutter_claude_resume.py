@@ -18,7 +18,8 @@ def main(argv):
             child.send_signal(signum)
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    signal.signal(signal.SIGHUP, stop)
+    if hasattr(signal, 'SIGHUP'):  # nicht unter Windows
+        signal.signal(signal.SIGHUP, stop)
     child = subprocess.Popen([binary, '--agent', agent, '--resume', identity, *extra])
     code = child.wait()
     if code != 0 and not stopping:

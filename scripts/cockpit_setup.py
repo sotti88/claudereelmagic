@@ -29,8 +29,8 @@ import sys
 import time
 
 for _p in ("/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"):
-    if os.path.isdir(_p) and _p not in os.environ.get("PATH", "").split(":"):
-        os.environ["PATH"] = _p + ":" + os.environ.get("PATH", "")
+    if os.path.isdir(_p) and _p not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = _p + os.pathsep + os.environ.get("PATH", "")
 
 OK, WARN, FAIL = "  OK  ", " WARN ", " FAIL "
 befunde = []

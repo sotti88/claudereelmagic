@@ -3,12 +3,10 @@ from __future__ import annotations
 import base64
 from contextlib import contextmanager
 from dataclasses import dataclass
-import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
-import pty
 import queue
 import re
 import shutil
@@ -16,11 +14,17 @@ import signal
 import struct
 import subprocess
 import sys
-import termios
 import threading
 import time
 from urllib.parse import parse_qs, urlparse
 import uuid
+
+from platform_compat import HAS_PTY, SIGKILL, file_lock
+
+if HAS_PTY:  # Mac/Linux; unter Windows gibt es kein PTY (siehe TerminalManager.start)
+    import fcntl
+    import pty
+    import termios
 
 PROVIDERS = ("claude", "codex")
 BUFFER_LIMIT = 400_000
@@ -55,19 +59,6 @@ def atomic_json(path, document):
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
-
-
-@contextmanager
-def file_lock(path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
-    with os.fdopen(fd, "a+") as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(stream, fcntl.LOCK_UN)
 
 
 class ProviderStore:
@@ -116,6 +107,8 @@ def process_tree(roots):
     """roots plus alle Nachfahren laut ps. Fuer den Session-Kill: obsidian-mcp und
     whatsapp-mcp ignorieren SIGHUP und blieben sonst als Waisen zurueck (18.09.2026:
     100 + 72 Stueck gefunden)."""
+    if not HAS_PTY:  # Windows: kein ps; Wurzel-Prozesse reichen (kein tmux/PTY-Baum)
+        return set(roots)
     try:
         listed = subprocess.run(["ps", "-eo", "pid=,ppid="], capture_output=True, text=True, timeout=5)
     except (OSError, subprocess.SubprocessError):
@@ -155,7 +148,7 @@ def terminate_tree(pids, grace=2.0, sleep=time.sleep):
                 alive.discard(pid)
     for pid in alive:
         try:
-            os.kill(pid, signal.SIGKILL)
+            os.kill(pid, SIGKILL)
         except (ProcessLookupError, PermissionError):
             pass
     return alive
@@ -367,6 +360,11 @@ class TerminalManager:
     def start(self, provider=None, cols=120, rows=32):
         provider = provider_name(provider or self.selected())
         session = self.session(provider)
+        if not HAS_PTY:
+            raise RuntimeError(
+                "Das eingebettete Terminal ist unter Windows noch nicht verfuegbar. "
+                "Nutze Claude Code im normalen Fenster - Schnitt, Cockpit und "
+                "Style-Studio funktionieren trotzdem.")
         with self.start_lock, session.lock:
             if session.alive:
                 return session

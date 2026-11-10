@@ -13,11 +13,9 @@ from cutter_provider import TerminalManager, TerminalHandlerMixin, provider_name
 from cutter_broll_jobs import submit_marker
 from cutter_broll_jobs import enqueue as enqueue_broll
 from broll_auftrag import freeze_for_job as freeze_broll_job
-import fcntl
 from fractions import Fraction
 import json
 import os
-import pty
 import queue
 import re
 import shlex
@@ -26,10 +24,10 @@ import signal
 import struct
 import subprocess
 import sys
-import termios
 import threading
 import time
 import sf_project
+from platform_compat import add_to_path, open_file, reveal_in_file_manager
 import broll_contract
 import cutter_broll_session
 import cutter_session_lifecycle
@@ -54,9 +52,10 @@ for _p in ("/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin",
            "/opt/homebrew/sbin",
            os.path.join(_HOME, ".npm-global/bin"),
            os.path.join(_HOME, ".local/bin"),
-           os.path.join(_HOME, "bin")):
-    if os.path.isdir(_p) and _p not in os.environ.get("PATH", "").split(":"):
-        os.environ["PATH"] = _p + ":" + os.environ.get("PATH", "")
+           os.path.join(_HOME, "bin"),
+           os.path.join(os.environ.get("APPDATA", ""), "npm") if os.environ.get("APPDATA") else ""):
+    if _p:
+        add_to_path(_p)  # richtiger PATH-Trenner (Windows: ';' statt ':')
 
 
 def tool_health():
@@ -922,9 +921,8 @@ class Handler(TerminalHandlerMixin, BaseHTTPRequestHandler):
             return self._send_json({"error": "Dieser Export ist noch nicht fertig"}, HTTPStatus.CONFLICT)
         if request.get("action") not in ("open", "finder"):
             return self._send_json({"error": "Unbekannte Aktion"}, HTTPStatus.BAD_REQUEST)
-        args = ["open"] + (["-R"] if request["action"] == "finder" else []) + [path]
-        result = subprocess.run(args, capture_output=True, text=True)
-        return self._send_json({"ok": result.returncode == 0, "file": path})
+        ok = reveal_in_file_manager(path) if request["action"] == "finder" else open_file(path)
+        return self._send_json({"ok": ok, "file": path})
 
     def start_sf_render(self, mode, request=None):
         import cutter_render_jobs

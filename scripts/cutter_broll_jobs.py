@@ -47,6 +47,8 @@ def process_group_alive(directory, doc):
     pgid = launch.get("processGroup") or doc.get("pid")
     if not pgid:
         return None  # Legacy queued jobs have no reliable owner identity.
+    if not hasattr(os, "killpg"):  # Windows: keine Prozessgruppen -> Besitzer unbekannt
+        return None
     try:
         os.killpg(int(pgid), 0)
         return True

@@ -551,4 +551,5 @@ RUNTIME.stage("mux", 1, 1)
 print(f"[rebuild_sf] FERTIG: {os.path.basename(proxy)} ({dur_total:.2f}s, "
       f"{FPS} fps) in {time.time()-_T0:.0f}s Renderzeit", flush=True)
 if EXPORT and not JOB_DIR:
-    subprocess.run(["open", "-R", proxy], check=False)
+    from platform_compat import reveal_in_file_manager
+    reveal_in_file_manager(proxy)
