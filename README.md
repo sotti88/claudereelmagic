@@ -1,0 +1,172 @@
+# Claude Video-Cutter
+
+> **Produktionsstand vom 23.09.2026.** Cockpit und benötigte Runtime-Dateien
+> wurden aus dem aktuellen lokalen Produktionssystem übernommen. Nach dem
+> Update die Abhängigkeiten aus `requirements.txt` erneut installieren.
+> Dieser Stand ist macOS-basiert. Die ältere Windows-Portierung wurde beim
+> Produktionsabgleich nicht erneut angewendet; Windows ist in diesem Stand
+> nicht unterstützt. Optionale Codex- und B-Roll-Funktionen setzen das
+> entsprechende zusätzliche Agenten-/Profil-Setup voraus.
+
+Ein Claude-Code-Agent, der lange Talking-Head- und Tutorial-Videos (20-90 Min,
+deutsch) end-to-end schneidet: Verbatim-Transkription, redaktionelle
+Cut-Entscheidungen (Retakes, Versprecher, Fehlstarts, Nicht-Content),
+sample-genauer Schnitt an echten Pausen, QA über jede einzelne Naht — und am
+Ende ein **Cut-Cockpit im Browser** mit CapCut-artiger Timeline und
+integriertem Claude-Terminal für den Feinschnitt.
+
+Das ist das echte Produktions-Setup von [Sebastian Kauffmann](https://www.skool.com/skaile)
+(SKAILE Academy) — genau so, wie es täglich für seine Videos läuft.
+
+![Cut-Cockpit](docs/cockpit.jpeg)
+
+## Was der Agent macht
+
+1. **Transkribiert verbatim** (AssemblyAI mit best-guess-Prompt — Versprecher
+   bleiben sichtbar, sonst kann man sie nicht schneiden)
+2. **Entscheidet redaktionell**: Fenster-Subagenten finden Retakes
+   (keep-last), ein Global-Pass wirft ganze Nicht-Content-Sektionen raus,
+   ein Gegenleser prüft alles
+3. **Schneidet deterministisch**: Der Agent liefert nur Wort-IDs, ein
+   Energie-Solver misst die Schnittpunkte sample-genau aus der Waveform —
+   nie mitten im Wort, nie im Sprachfluss
+4. **Prüft jede Naht** (QA-Pyramide mit Whisper-Gegencheck + Auto-Repair)
+   und rendert einen Proxy mit Beweisen (A/V-Sync, Hör-Stichproben)
+5. **Übergibt ehrlich**: Review-Liste mit Graufällen + Cut-Cockpit im
+   Browser (Timeline mit Waveforms, Trimmen, Splitten, Q/W/E-Quick-Cuts,
+   J-Cuts, Gain, B-Roll-/Screen-Slots mit Facecam-Kreis, T-Markierung für
+   B-Roll-Briefings, All-Intra-Playback-Proxy für butterweiches Scrubbing,
+   Re-Render — und rechts ein echtes Claude-Terminal mit dem Cutting-Agenten).
+   `cockpit_setup.py` richtet jedes Workdir idempotent ein und prüft es.
+
+Philosophie: **Agent = Regie, Code = Kamera.** Der Agent entscheidet WAS
+geschnitten wird, deterministischer Code entscheidet WO. Ziel sind 90%+
+Automatik plus eine kurze, präzise Review-Liste — "100% ohne Draufschauen"
+verspricht dir hier niemand.
+
+## Voraussetzungen
+
+- **macOS** (dort entwickelt und getestet) **oder Windows** (voll
+  eingebaut inkl. Terminal im Cockpit via ConPTY — frisch portiert, von
+  Windows-Usern zu verifizieren; Feedback willkommen)
+- **Claude Code** (Abo, [claude.com/claude-code](https://claude.com/claude-code))
+- **ffmpeg** (macOS: `brew install ffmpeg` · Windows: `winget install ffmpeg`)
+- **Python 3.12** (macOS: `brew install python@3.12` · Windows: `winget install Python.Python.3.12`)
+- **AssemblyAI-Account** (kostenlos, siehe Kosten)
+
+## Kosten
+
+| Was | Kosten |
+|---|---|
+| AssemblyAI-Account | **$50 Startguthaben gratis, ohne Kreditkarte** (Stand Juli 2026) |
+| Transkription (async, Basisrate) | ~$0.21 pro Audio-Stunde — die $50 reichen für ~185 Stunden |
+| Whisper-QA-Modell | kostenlos, läuft lokal (einmaliger Download ~3 GB beim ersten Lauf) |
+| ffmpeg / Python | kostenlos |
+
+Zur Einordnung: Sebastian nutzt denselben Account seit über einem Jahr für
+seine Videoproduktion und hat davon rund $45 verbraucht.
+
+## Installation (ein Prompt)
+
+Öffne Claude Code und gib ihm diesen Prompt:
+
+```
+Klone das Repo https://github.com/sebaskauf/claude-video-cutter und lies
+zuerst die INSTALL.md — sie ist an dich adressiert. Analysiere davor kurz
+mein bestehendes Claude-Code-Setup (~/.claude: welche Agents und Skills
+ich schon habe, ob es Namens-Kollisionen mit video-cutter oder
+video-cut-* gibt) und passe die Installation optimal daran an. Richte
+dann alles komplett ein: Voraussetzungen prüfen (ffmpeg, Python 3.12 —
+Fehlendes mit mir zusammen installieren), Python-Umgebung bauen, Agent +
+Skills global installieren, und führe mich Schritt für Schritt durch die
+kostenlose AssemblyAI-Einrichtung: Such mir die aktuellen Links, zeig
+mir, wo mein API-Key liegt, und trag ihn sicher in die .env ein. Erkläre
+mir jeden Schritt kurz, bevor du ihn ausführst, und frag nach, bevor du
+etwas überschreibst. Am Ende zeigst du mir, wie ich mein erstes Video
+schneide und das Cut-Cockpit im Browser auf 127.0.0.1:8766 öffne.
+```
+
+**Du nutzt das [Agentic OS Obsidian-Plugin](https://github.com/sebaskauf/agentic-os)?**
+Dann nimm stattdessen diesen Prompt — er richtet zusätzlich den CUTTER-Tab
+direkt in deinem Agentic OS ein:
+
+```
+Klone das Repo https://github.com/sebaskauf/claude-video-cutter und lies
+zuerst die INSTALL.md und die INSTALL-AGENTIC-OS.md — beide sind an dich
+adressiert. Analysiere davor kurz mein bestehendes Claude-Code-Setup
+(~/.claude: vorhandene Agents/Skills, mögliche Namens-Kollisionen) UND
+meine Agentic-OS-Installation: Finde den Obsidian-Vault mit dem Plugin
+(.obsidian/plugins/agentic-os), lies die manifest.json und prüfe die
+Version. Richte dann alles komplett ein: Voraussetzungen, Python-Umgebung,
+Agent + Skills global, kostenlose AssemblyAI-Einrichtung mit aktuellen
+Links — und aktualisiere mein Agentic OS auf die neueste Version mit dem
+CUTTER-Tab (Backup der alten Plugin-Dateien anlegen!) und hinterlege den
+Cutter-Pfad, sodass das Cut-Cockpit als eigener Tab in meinem Agentic OS
+läuft. Erkläre mir jeden Schritt kurz, bevor du ihn ausführst, und frag
+nach, bevor du etwas überschreibst.
+```
+
+## Benutzung
+
+Nach der Installation sagst du deinem Claude Code einfach:
+
+```
+schneide das Video /Pfad/zu/deinem/video.mov
+```
+
+Der Agent übernimmt alle vier Phasen (Transkription → Entscheidungen →
+Schnitt+QA → Render+Übergabe) und öffnet am Ende das Cut-Cockpit auf
+`http://127.0.0.1:8766/` — dort machst du den Feinschnitt: Clips trimmen
+(mit echter Waveform), W/Q/E-Cuts wie in CapCut, Gain-Linie, B-Roll-Slots,
+und rechts sprichst du direkt mit deinem Cutting-Agenten.
+
+Rechne bei einem 60-Minuten-Video mit einer guten Stunde Laufzeit
+(Transkription + Analyse + QA), die größtenteils unbeaufsichtigt läuft.
+
+## Was ist neu (September 2026)
+
+- **L-Cuts ohne Echo und ohne Stottern:** Eine waveform-gemessene
+  Pausen-Karte (`pause_map.json`, entsteht automatisch) klemmt jeden L-Cut
+  auf die echte Stille an der Naht — Player und Renderer rechnen dabei
+  garantiert identisch (Cross-Test `scripts/test_echo_clamp.py`).
+- **Flüssiges Playback:** All-Intra-Playback-Proxys per portablem
+  `scripts/build_playback_proxy.py` (inkl. Startzeiten-Erhalt); fehlt etwas,
+  sagt es dir jetzt ein Banner direkt im Cockpit statt still im Server-Log.
+- **Persistente Agent-Sessions** (macOS/Linux, braucht `tmux`): Die
+  Claude-Session im Cockpit läuft pro Projekt in einer tmux-Session weiter,
+  auch wenn du das Projekt wechselst — ein B-Roll-Auftrag baut im
+  Hintergrund fertig, ein Badge im Header zeigt, wer gerade arbeitet, und
+  beim Zurückwechseln ist dieselbe Session wieder offen. Nach einem Reboot
+  wird der Gesprächskontext per `--resume` wiederhergestellt.
+- **B-Roll-Aufträge treffsicher:** Das T-Marker-Briefing rechnet die
+  Zeitachse jetzt inklusive L-Cuts (vorher konnte es bei vielen L-Cuts um
+  Sekunden danebengreifen).
+- `cockpit_setup.py` prüft/erzeugt das alles automatisch pro Video
+  (Pausen-Karte, Proxy-Hinweis, Status-Hooks).
+
+## Was drin ist
+
+```
+agent/video-cutter.md          Der Agent (10 Gesetze, 4 Phasen)
+skills/video-cut-*/            Die 4 Phasen-Skills (Transkription,
+                               Entscheidung, Pipeline, Übergabe)
+scripts/                       Die deterministische Pipeline (Transkription,
+                               Solver, QA, Cut, Re-Render, Cockpit-Server)
+scripts/cockpit/               Das Cut-Cockpit (Browser-UI, self-contained)
+```
+
+## Grenzen (ehrlich)
+
+- Optimiert für **deutsche** Talking-Head-/Tutorial-Videos
+- **macOS-first** — der Windows-Pfad (inkl. ConPTY-Terminal, Software-Encoding
+  beim Final-Render) ist komplett eingebaut, aber noch nicht auf echter
+  Windows-Hardware verifiziert. Linux ungetestet
+- Semantische Dopplungen ("dasselbe anders formuliert") findet kein System
+  der Welt zu 100% — dafür gibt es die Review-Liste und das Cockpit
+- Der Agent braucht Claude Code mit einem Modell auf Opus-Niveau für die
+  redaktionellen Entscheidungen
+
+## Lizenz
+
+MIT — siehe [LICENSE](LICENSE). Gebaut von Sebastian Kauffmann / SKAILE,
+mit Claude Code.
