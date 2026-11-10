@@ -1,0 +1,27 @@
+NOTICE
+======
+
+Dieses Projekt ("claudereelmagic") ist ein abgeleitetes Werk und besteht aus
+zwei Teilen mit getrennter Urheberschaft.
+
+1. Basis: claude-video-cutter
+   Copyright (c) 2026 Sebastian Kauffmann / SKAILE
+   Quelle:  https://github.com/sebaskauf/claude-video-cutter
+   Stand:   Upstream-Commit 953ff6fe799c6495d79c251c147c12e7195af08c (23.09.2026)
+   Lizenz:  MIT, siehe Datei LICENSE (unveraendert)
+
+   Alle aus diesem Projekt uebernommenen Dateien und Dateiteile bleiben
+   unter der MIT-Lizenz von Sebastian Kauffmann / SKAILE. Der Copyright-
+   Hinweis und der Lizenztext in LICENSE muessen in allen Kopien und
+   wesentlichen Teilen dieser Basis erhalten bleiben.
+
+2. Erweiterungen
+   Copyright (c) 2026 Bianka Steinberger
+   Betrifft alle Dateien und Aenderungen, die nach dem Import der Basis
+   neu hinzugefuegt wurden (zum Beispiel Design-Funktionen wie Untertitel,
+   Ueberschriften, Animationen, Intro/Outro/Logo). Dateien mit
+   Aenderungen an der Basis sind ueber die Git-Historie nachvollziehbar.
+
+Hinweis: Diese Datei ersetzt NICHT die Datei LICENSE und ist keine
+Rechtsberatung. Vor einer kommerziellen Weitergabe die Nutzungsbedingungen
+des "Resource Pack" pruefen, aus dem die Basis stammt.
